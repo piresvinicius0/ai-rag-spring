@@ -1,5 +1,6 @@
 package com.vp.aibackendrag.ingestion.pdf;
 
+import com.vp.aibackendrag.ingestion.model.IngestedDocument;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -9,6 +10,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class PdfIngestionService {
@@ -16,23 +20,23 @@ public class PdfIngestionService {
     private static final Logger log = LoggerFactory.getLogger(PdfIngestionService.class);
     private static final String PDF_DIRECTORY = "data/pdfs";
 
-    public void ingestPdfs() throws Exception {
+    public List<IngestedDocument> ingestPdfs() throws Exception {
         File[] pdffiles = new File(PDF_DIRECTORY).listFiles();
+        List<IngestedDocument> docs = new ArrayList<>();
+
         for (File pdfFile : pdffiles) {
             if (pdfFile.isFile() && pdfFile.getName().endsWith(".pdf")) {
-                log.info("Ingesting PDF: " + pdfFile.getName());
-                ingestSinglePdf(pdfFile);
+                docs.add(ingestSinglePdf(pdfFile));
             }
         }
+        return docs;
     }
 
-    private void ingestSinglePdf(File pdfFile) throws IOException {
-        log.info("Ingesting PDF: {}", pdfFile.getName());
+    private IngestedDocument ingestSinglePdf(File pdfFile) throws IOException {
         try(PDDocument document = Loader.loadPDF(pdfFile)) {
             PDFTextStripper stripper = new PDFTextStripper();
             String text = stripper.getText(document);
-            log.info("---Extracted Text ({}) -----", pdfFile.getName());
-            log.info(text);
+            return new IngestedDocument("PDF", text, Map.of("filename", pdfFile.getName()));
         }
     }
 }
