@@ -18,6 +18,20 @@ public class DatabaseIngestionService {
     private static final Logger log = LoggerFactory.getLogger(DatabaseIngestionService.class);
     private final JdbcTemplate jdbcTemplate;
 
+
+    public List<IngestedDocument> ingest(String tableName) {
+        if("faqs".equalsIgnoreCase(tableName)) {
+            return ingestFaqs();
+        } else if("release_notes".equalsIgnoreCase(tableName)) {
+            return ingestReleaseNotes();
+        } else if("announcements".equalsIgnoreCase(tableName)) {
+            return ingestAnnouncements();
+        } else {
+            log.warn("Unknown table name for ingestion: {}", tableName);
+            return new ArrayList<>();
+        }
+    }
+
     public List<IngestedDocument> ingestDatabaseContent() {
         List<IngestedDocument> docs = new ArrayList<>();
         docs.addAll(ingestFaqs());
@@ -31,7 +45,7 @@ public class DatabaseIngestionService {
         List<IngestedDocument> docs = new ArrayList<>();
         for (Map<String, Object> faq : faqs) {
             String content = "Question: " + faq.get("question") + "\nAnswer: " + faq.get("answer");
-            docs.add(new IngestedDocument("DB", content, Map.of("id", faq.get("id"), "department", faq.get("department"), "visibility", faq.get("visibility"))));
+            docs.add(new IngestedDocument("DB", content, Map.of("id", faq.get("id"), "department", faq.get("department"), "visibility", faq.get("visibility"), "identity", "DB#faqs")));
         }
         return docs;
     }
@@ -43,7 +57,7 @@ public class DatabaseIngestionService {
             String content = "Version: " + note.get("version") +
                     "\nSummary: " + note.get("summary") +
                     "\nDetails: " + note.get("datails");
-            docs.add(new IngestedDocument("DB", content, Map.of("table","release_notes","id", note.get("id"), "version", note.get("version"), "release_date", note.get("release_date"))));
+            docs.add(new IngestedDocument("DB", content, Map.of("table","release_notes","id", note.get("id"), "version", note.get("version"), "release_date", note.get("release_date"), "identity", "DB#release_notes")));
         }
         return docs;
     }
@@ -60,7 +74,8 @@ public class DatabaseIngestionService {
                             "id", row.get("id"),
                             "category", row.get("category"),
                             "effective_from", row.get("effective_from"),
-                            "effective_to", row.get("effective_to") != null ? row.get("effective_to") : "", "source_type", row.get("source_type"))));
+                            "effective_to", row.get("effective_to") != null ? row.get("effective_to") : "", "source_type", row.get("source_type"),
+                            "identity", "DB#announcements")));
         }
         return docs;
     }

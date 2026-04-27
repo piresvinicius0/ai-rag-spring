@@ -3,6 +3,8 @@ package com.vp.aibackendrag.service;
 import com.vp.aibackendrag.chunking.model.Chunk;
 import com.vp.aibackendrag.dto.ChatRequest;
 import com.vp.aibackendrag.dto.ChatResponse;
+import com.vp.aibackendrag.prompt.PromptOrchestrator;
+import com.vp.aibackendrag.prompt.model.ChatPrompt;
 import com.vp.aibackendrag.retrieval.RetrievalService;
 import com.vp.aibackendrag.retrieval.model.RetrievalResult;
 import lombok.RequiredArgsConstructor;
@@ -14,15 +16,20 @@ import org.springframework.stereotype.Service;
 public class ChatService {
 
     private final ChatClient chatClient;
-    private final RetrievalService retrievalService;
+    private final PromptOrchestrator promptOrchestrator;
 
     public ChatResponse chat(ChatRequest request) {
         String userMessage = request.getMessage();
-        RetrievalResult retrievalResult = retrievalService.retrieve(userMessage);
-        String context = buildContext(retrievalResult);
+        ChatPrompt prompt = promptOrchestrator.build(userMessage);
+        String llmInput = prompt.getGroudingRule()
+                + "\n\n"
+                + prompt.getContext().getContextText()
+                + "\n\nUser Question: \n"
+                + userMessage;
+
         String aiAnswer = chatClient
-                .prompt()
-                .system(context)
+                .prompt(prompt.getSystemInstructions().getInstructions())
+                .system(llmInput)
                 .user(request.getMessage())
                 .call()
                 .content();
